@@ -1,0 +1,130 @@
+Search Indexes
+| tstats values(sourcetype) where index=* group by index
+
+DNS
+index=dns <dns term> | table _time src src_port dest query message_type record_class record_type | sort –_time
+
+CAS Logs
+index=cas 1a:2b:3c:4e:5f:6a OR 1a-2b-3c-4e-5f-6a OR 1a2b3c4e5f6a
+| rex field=_raw "for\s(?<URL>.*)\&start"
+| rex field=_raw "^([^|]*\|){0,4}(?<User>[^defender|]*)"
+| rex field=_raw "^([^|]*\|){0,5}(?<IPAddress>[^|]*)"
+| table _time index source URL User IPAddress
+
+Radius
+ index=radius 1a:2b:3c:4e:5f:6a OR 1a-2b-3c-4e-5f-6a OR 1a2b3c4e5f6a | table _time app eventtype signature client_mac user tag connect_details
+
+index=radius f4:8c:50:c3:1f:ef OR f4-8c-50-c3-1f-ef OR f48c50c31fef
+| rex field=_raw "\[(?<radiusUser>\S+@\S+)\]"
+| rex field=connect_details "cli\s(?<MAC_Address>\S+:\S+:\S+:\S+:\S+:\S+)"
+| table  _time app eventtype signature MAC_Address radiusUser tag
+
+ssh 
+
+index=unix_os source=/var/log/auth.log tty=ssh 
+| rex field=_raw "sshd\:auth\)\:\s+(?<authMessage>[^;]+)"
+| table _time date_wday date_year date_month date_mday date_hour date_minute date_second tty ruser rhost uid user authMessage
+| sort -_time
+
+Windows Security logs (from cyberfl splunk)
+index=windows source=WinEventLog:Security (EventCode=4624 OR EventCode=4672 OR EventCode=4625 OR EventCode=4634 OR EventCode=4647 OR EventCode=4800 OR EventCode=4801 OR EventCode=4803) AND 
+(ComputerName=hostname AND Account_Name=username*)
+| table  _time ComputerName Account_Name EventCode Logon_Type TaskCategory Message _raw
+| sort -_time
+
+PAN Firewall
+index=pan_logs <IP address and could have an AND statement with another> | table _time src_ip src_port dest_ip dest_port bytes_in bytes_out bytes packets | sort –_time
+REX example
+index= pan_logs 131.247.253.69
+| rex field=_raw "\"(?<PossibleCategory>.*?)\""
+| search
+| table _time src_ip src_port dest_ip dest_port PossibleCategory bytes_in bytes_out bytes packets
+| sort –_time
+
+index = pan_logs <Destination IP> AND <Source IP> | table _time start_time client_ip src_port src_translated_ip src_translated_port dest_ip dest_port dest_location action signature bytes_in bytes_out product
+Azure MFA
+index=azure user=<insert netid_email> | table _time createdDateTime user userDisplayName deviceDetail.displayName ipAddress appDisplayName deviceDetail.browser deviceDetail.trustType deviceDetail.operatingSystem deviceDetail.isManaged location.city location.state location.countryOrRegion reason action status.additionalDetails
+index=azure ipAddress=<IP Address> | table _time createdDateTime user userDisplayName deviceDetail.displayName sourcetype app ipAddress riskEventTypes{} appDisplayName deviceDetail.browser deviceDetail.trustType deviceDetail.operatingSystem deviceDetail.isManaged location.city location.state location.countryOrRegion reason action status.additionalDetails
+
+Azure Sign in Activity
+index=azure <term like Name> | table _time createdDateTime user_id displayName mail jobTitle ipAddress location.city location.state location.countryOrRegion location.geoCoordinates.latitude location.geoCoordinates.longitude Detail.browser deviceDetail.isManaged deviceDetail.operatingSystem eventtype app clientAppUsed action reason riskDetail riskEventTypes_v2{} riskLevelDuringSignIn riskState status.errorCode status.failureReason status.additionalDetails | sort -_time
+Defender
+index=defender <term> | table _time  creationTime  firstActivity sourcetype serviceSource title incidentId  alertId entities{}.aadUserId entities{}.accountName entities{}.userPrincipalName entities{}.userSid entities{}.entityType entities{}.ipAddress severity entities{}.verdict detectorId detectionSource description | sort –_time
+Defender EDI Alerts Specific
+index=defender sourcetype=ms365:defender:incident:alerts serviceSource=MicrosoftDefenderForIdentity classification!=FalsePositive (severity=medium OR severity=high)
+| rename entities{}.aadUserId AS aaduserId, entities{}.accountName AS accountName, entities{}.userPrincipalName AS userPrincipalName, entities{}.userSid AS userSid, entities{}.entityType AS entityType, entities{}.ipAddress AS ipAddress, entities{}.verdict AS verdict, devices{}.deviceDnsName AS deviceDnsName, devices{}.healthStatus AS healthStatus, devices{}.firstSeen AS firstSeen
+| table _time  creationTime  firstActivity sourcetype serviceSource title incidentId  alertId classification deviceDnsName healthStatus firstSeen aadUserId accountName userPrincipalName userSid entityType ipAddress severity verdict mitre_technique_id detectorId detectionSource description
+| sort –_time
+Defender Aggregate to IP
+index=defender detectionSource=AAD severity=high detectorId=PasswordSpray 
+| rename entities{}.aadUserId AS aaduserId, entities{}.accountName AS accountName, entities{}.userPrincipalName AS userPrincipalName, entities{}.userSid AS userSid, entities{}.entityType AS entityType, entities{}.ipAddress AS ipAddress, entities{}.verdict AS verdict
+| table _time  creationTime  firstActivity sourcetype serviceSource title incidentId  alertId aadUserId accountName userPrincipalName userSid entityType ipAddress severity verdict detectorId detectionSource description 
+|stats count by ipAddress | sort -count
+Defender Aggregate to User
+index=defender detectionSource=AAD severity=high detectorId=PasswordSpray | table _time  creationTime  firstActivity sourcetype serviceSource title incidentId  alertId entities{}.aadUserId entities{}.accountName entities{}.userPrincipalName entities{}.userSid entities{}.entityType entities{}.ipAddress severity entities{}.verdict detectorId detectionSource description | stats count by entities{}.accountName | sort -count
+ 
+O365 MFA
+index=o365 <insert term, like IP or netid> | table _time CreationTime UserId Actor{}.ID ActorIpAddress ClientIP dest dataset_name command OS BrowserType user_agent RequestType Operation action | sort –_time
+
+index=o365 sourcetype=o365:management:activity <Insert term>  | table _time CreationTime UserId Actor{}.ID ActorIpAddress ClientIP dest dataset_name command OS BrowserType user_agent RequestType Operation action | sort –_time
+O365 Email Audit Logs (In progress)
+index=o365 <email_address>  | table _time CreationTime UserId ClientIPAddress Item.Subject Item.ParentFolder.Path Item.Attachments  ClientProcessName ClientInfoString ClientVersion ResultStatus Operation user_agent| sort –_time
+
+Assets lookup
+index=assets <IP Address(es)> | table ip nt_host dns category | dedup ip
+index=assets <user_term> | table _time first last nick bunit email identity startDate priority
+Security log lookup (in progress)
+index=winevents <insert account or term>l | table _time Account_Name ComputerName user src_user Source_Network_Address dest_nt_host EventCode Logon_Type eventtype category result Elevated_Token action app name object object_attrs Keywords | sort –_time
+
+Zendesk
+index=zendesk sourcetype=zendesk:api:tickets 
+| rex field=raw_subject (?<M1>Microsoft\s365\sDefender)
+| rex field=raw_subject (?<M2>MS\WISAC\W)
+| search raw_subject=*MS-ISAC*
+| dedup id
+| table created_at id raw_subject description status
+
+Crowdstrike
+index="crowdstrike_event_streams" (metadata.eventType="DetectionSummaryEvent" OR metadata.eventType=EppDetectionSummaryEvent)
+| table _time metadata.eventType event.AgentId event.UserName event.ComputerName event.Hostname event.LocalIP event.MachineDomain event.MACAddress event.MD5String event.SHA256String event.FileName event.FilePath event.CommandLine  event.ParentImageFileName event.ParentImageFilePath event.ParentCommandLine event.DetectName event.Tactic event.Technique event.PatternDispostionDescription event.Description
+
+TTX
+IDS
+ index=ids <hostname> OR <hostname> | table _time timestamp alert.signature proto allowed src_ip src_port dest_ip dest_port files{}.filename alert.rule payload_printable
+ 
+Onion
+index=onion <hostname> OR <hostname> source="/nsm/zeek/logs/current/dhcp.log" | table _time ts timestamp assigned_addr client_addr requested_addr server_addr client_fqdn domain host_name mac msg_types{} lease_time
+
+index=onion “<File Name>” source="/nsm/zeek/logs/current/http.log" | table _time ts id.orig_h id.orig_p id.resp_h id.resp_p method status_code host uri user_agent
+
+ 
+Windows
+index=windows <hostname> OR <hostname> source="WinEventLog:Security" EventCode=4624 user=<username>
+| table _time LogNanme EventCode Logon_Type status user host_name ComputerName Process_Name Message
+ 
+index=windows <hostname> OR <hostname> source="WinEventLog:Security" | stats count by EventCode
+ 
+index=windows <hostname> OR <hostname> Process_Name="C:\\Windows\\System32\\schtasks.exe" | table _time LogName host dest_nt_host dest_nt_domain Network_Address Port user user_name user_sid action process EventCode name event_description Message
+ 
+index=windows <hostname> OR <hostname> ".exe" | stats count by EventCode | sort –count
+ 
+index=windows <hostname> OR <hostname> source="WinEventLog:Microsoft-Windows-Powershell/Operational" EventCode=4100
+| rex "(?m)User\s*=\s*(?<user1>[^\r\n]+)[\r\n]+.*\n.*User\s*=\s*(?<user2>[^\r\n]+)"
+| rex "Host Application = (?<Powershell_Command>[^\r\n]+)"
+| rex "Message\s*=\s*.*Error Message\s*=\s*(?<Error_Message>[^\r\n]+)"
+| table _time LogName ComputerName user1 SID Powershell_Command EventCode Error_Message Message
+  
+Sysmon Look for Powershell
+index=windows *.exe EventCode NOT 3 AND "powershell"
+|table _time ComputerName User LogName OriginalFileName CommandLine ParentImage ParentCommandLine Message
+| sort -_time
+
+
+
+Microsoft Defender – Advanced Hunting: USF ID Search w/ MAC
+Syslog
+| where SeverityLevel == "notice"
+| parse SyslogMessage with * "Login OK: [" UserPrincpalName_CF "] (from client " IPCidr_CF "port " Port_CF " cli " MacAddress_CF ")"
+| where MacAddress_CF == "Insert MAC HERE"
+| project UserPrincpalName_CF, MacAddress_CF, TimeGenerated
+
