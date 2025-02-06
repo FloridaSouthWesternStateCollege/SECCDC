@@ -1,0 +1,20 @@
+Documentation Templates 
+  https://docs.google.com/document/d/1QFzX6Ix3BuZgvdg_XVjveCzBHcRcdHBmzfZ0HTlxJfw/edit?usp=sharing
+Repos Notes
+  https://docs.google.com/spreadsheets/d/1geVc_GBbHPbXEvvSTWKAbQItixCWiJIVajKP63ZB9JA/edit?usp=sharing
+Backup Links
+  https://docs.google.com/document/d/1PY6UA5vvzOfen2NhToNXVdQbkZkVJ5XGs7oyIAGfEMc/edit?usp=sharing
+Cheatsheets
+  https://docs.google.com/document/d/155D9ktJAIWGRjXR3Gg9xHZRPE_zHKesNkYx3gV2cJ1c/edit?usp=sharing
+
+
+SirPensworth
+  https://docs.splunk.com/Documentation/Splunk/9.4.0/Installation/DeployandrunSplunkEnterpriseinsideDockercontainers
+
+SleepDeprivedEli
+  https://github.com/DragonDefenders/Windows-Server-2012-Hardening
+  https://github.com/Cloudneeti/os-harderning-scripts/blob/master/WindowsServer2012R2/CSBP_WindowsServer2012_R2.ps1
+
+Suricata https://suricata.io/download/
+Wazuh https://wazuh.com/install/
+Ansible https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible
