@@ -1,0 +1,55 @@
+#!/bin/bash
+# CCDC EMERGENCY ROUTER SCRIPT (UFW VERSION)
+# Usage: sudo ./emergency_ufw_router.sh <WAN_INTERFACE> <LAN_INTERFACE>
+# Example: sudo ./emergency_ufw_router.sh eth0 eth1
+
+WAN=$1
+LAN=$2
+
+if [ -z "$LAN" ]; then
+    echo "Usage: sudo ./emergency_ufw_router.sh <Internet_Interface> <Internal_Interface>"
+    echo "Example: sudo ./emergency_ufw_router.sh ens160 ens192"
+    exit 1
+fi
+
+echo "[*] TURNING THIS SERVER INTO A FIREWALL (UFW)..."
+
+# 1. Enable IP Forwarding
+echo "[*] Enabling IP Forwarding..."
+sed -i 's/^#net\/ipv4\/ip_forward=1/net\/ipv4\/ip_forward=1/' /etc/ufw/sysctl.conf
+sed -i 's/^net\/ipv4\/ip_forward=0/net\/ipv4\/ip_forward=1/' /etc/ufw/sysctl.conf
+sysctl -w net.ipv4.ip_forward=1
+
+# 2. Reset UFW
+echo "[*] Resetting UFW..."
+ufw --force reset
+
+# 3. Set default policies
+ufw default deny incoming
+ufw default allow outgoing
+ufw default deny routed
+
+# 4. Allow forwarding from LAN to WAN
+ufw route allow in on $LAN out on $WAN
+ufw route allow in on $WAN out on $LAN state related,established
+
+# 5. Configure NAT (Masquerading)
+echo "[*] Configuring NAT..."
+
+BEFORE_RULES="/etc/ufw/before.rules"
+
+if ! grep -q "CCDC EMERGENCY NAT" $BEFORE_RULES; then
+    sed -i "1i \
+# CCDC EMERGENCY NAT\n\
+*nat\n\
+:POSTROUTING ACCEPT [0:0]\n\
+-A POSTROUTING -o $WAN -j MASQUERADE\n\
+COMMIT\n" $BEFORE_RULES
+fi
+
+# 6. Enable UFW
+ufw --force enable
+
+echo "[+] NAT/Masquerading Enabled on $WAN."
+echo "[+] Firewall Rules Applied."
+echo "[!] EMERGENCY MODE ACTIVE. THIS MACHINE IS NOW THE GATEWAY."
