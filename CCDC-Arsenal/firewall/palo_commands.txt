@@ -1,0 +1,34 @@
+// CCDC PALO ALTO CLI COMMANDS
+// COPY-PASTE THESE INTO THE TERMINAL ONE SECTION AT A TIME
+
+// 1. Enter Configuration Mode
+configure
+
+// 2. Create the Anti-Spyware Profile (The DNS Tunnel Killer)
+set profiles spyware "CCDC-Sinkhole" botnet-domains dns-security-categories "malware" action sinkhole
+set profiles spyware "CCDC-Sinkhole" botnet-domains dns-security-categories "command-and-control" action sinkhole
+set profiles spyware "CCDC-Sinkhole" botnet-domains dns-security-categories "phishing" action sinkhole
+set profiles spyware "CCDC-Sinkhole" botnet-domains sinkhole ipv4-address 72.5.65.111
+set profiles spyware "CCDC-Sinkhole" botnet-domains sinkhole ipv6-address ::1
+
+// 3. Enable aggressive blocking on the profile
+set profiles spyware "CCDC-Sinkhole" severity critical action reset-both
+set profiles spyware "CCDC-Sinkhole" severity high action reset-both
+set profiles spyware "CCDC-Sinkhole" severity medium action drop
+
+// 4. Create a "Zone Protection" Profile (Stops flood attacks)
+set network profiles zone-protection-profile "CCDC-Flood-Protect" flood tcp-syn red alert-rate 10000 activate-rate 10000 maximal-rate 20000 action syn-cookies
+set network profiles zone-protection-profile "CCDC-Flood-Protect" flood udp red alert-rate 10000 activate-rate 10000 maximal-rate 20000 action drop
+
+// 5. Commit the changes (Save)
+commit
+exit
+
+// INSTRUCTIONS FOR GAME DAY:
+// 1. SSH into the Firewall (or use the Console).
+// 2. Paste the commands above.
+// 3. Go to the GUI -> Policies -> Security.
+// 4. Click your main "Outbound" rule (Trust to Untrust).
+// 5. Go to the "Actions" tab -> Profile Setting.
+// 6. Select "Anti-Spyware" and choose "CCDC-Sinkhole".
+// 7. Click OK and Commit.
